@@ -19,6 +19,7 @@ L'application est structurée autour des modules suivants :
 
 ### A. Ce qui est Totalement Implémenté 
 
+*   **Découverte de périphériques (mDNS / Zeroconf)** (`src/services/mdns.ts`, `HomeScreen.tsx`) : Recherche robuste des TV via mDNS avec gestion propre du cycle de vie (arrêt automatique après 5s ou au démontage de l'écran pour éviter la décharge de la batterie), pull-to-refresh et indicateurs d'état de chargement et d'absence de périphériques.
 *   **Structure globale et Navigation de base** : Intégration de React Navigation avec un empilement de base (Stack) liant l'écran d'accueil (`HomeScreen`) à l'écran de contrôle (`RemoteScreen`).
 *   **Composants UI élémentaires** :
     *   `TvCard.tsx` : Affichage simple des informations de la TV détectée (nom, IP/Hôte).
@@ -35,7 +36,6 @@ Les modules suivants fonctionnent dans un cas nominal simple mais présentent de
 
 | Module | Statut Actuel | Ce qui manque / Problèmes identifiés |
 | :--- | :--- | :--- |
-| **Découverte de périphériques** (`mdns.ts`) | Recherche les TV via mDNS et met à jour l'état de l'écran. | 1. **Pas d'arrêt du scan** : `stopSearch()` n'est jamais appelé au démontage de l'écran, ce qui entraîne une recherche continue en tâche de fond (fuite de batterie).<br>2. **Absence de rafraîchissement** : Pas de "Pull-to-refresh" ou bouton pour ré-exécuter une recherche.<br>3. **Feedback UX** : Aucun indicateur visuel de chargement pendant la recherche, ni d'état vide ("Aucune TV trouvée"). |
 | **Communication TCP** (`tvSocket.ts`) | Connecte le socket et envoie des commandes textuelles (`POWER`, `UP`, etc.). | 1. **Instance globale unique** : Empêche toute connexion multiple ou isolation propre de la session.<br>2. **Nettoyage incomplet** : `disconnectTV` détruit le socket mais ne remet pas la variable `client` à `null`, risquant des crashs sur les appels suivants.<br>3. **Communication unidirectionnelle** : Le socket n'écoute pas les retours de la TV (pas de listener `'data'`). Pas de retour d'état (ex: niveau de volume actuel).<br>4. **Doubles callbacks** : Les erreurs déclenchent à la fois `'error'` et `'close'`, exécutant deux fois le callback d'erreur sans garde-fou. |
 | **Reconnexion automatique** (`reconnect.ts`) | Lance un intervalle de 5s pour retenter la connexion. | 1. **Fuite de mémoire** : Si l'utilisateur quitte la télécommande pendant une reconnexion, l'intervalle continue indéfiniment sur un composant démonté.<br>2. **Stratégie rudimentaire** : Retente à l'infini à intervalle constant (pas de *Exponential Backoff* ni de limite de tentatives). |
 | **Interface & Expérience Utilisateur** (`RemoteScreen.tsx`) | Affiche les boutons et envoie les commandes au clic. | 1. **Blocage de navigation** : L'en-tête natif est caché (`headerShown: false`) et aucun bouton de retour arrière n'est présent sur l'écran de la télécommande. L'utilisateur est bloqué.<br>2. **Statut trompeur** : Le texte "Connexion..." s'affiche en vert (`colors.success`) même si la TV n'est pas joignable.<br>3. **Pas de retour haptique** : Pas de vibrations lors de l'appui sur les touches.<br>4. **Pas de persistance** : La dernière TV connectée n'est pas sauvegardée localement (recherche obligatoire à chaque ouverture). |
@@ -48,22 +48,13 @@ Les modules suivants fonctionnent dans un cas nominal simple mais présentent de
 Pour rendre l'application robuste, fluide et professionnelle, voici les modifications précises à apporter :
 
 ### 1. Fiabilisation du Cycle de Vie des Services (Mémoire et Batterie)
-*   **Nettoyage du scan mDNS** : Dans `HomeScreen.tsx`, retourner la fonction de nettoyage dans le `useEffect` pour stopper la détection :
-    ```typescript
-    useEffect(() => {
-      searchAndroidTV(...);
-      return () => stopSearch();
-    }, []);
-    ```
+*   ~~**Nettoyage du scan mDNS** : Dans `HomeScreen.tsx`, retourner la fonction de nettoyage dans le `useEffect` pour stopper la détection~~ **(Fait)**
 *   **Gestion propre de la Reconnexion** : Nettoyer l'intervalle de reconnexion lorsque le composant `RemoteScreen` est démonté en appelant `stopReconnect()` dans la fonction de nettoyage de son `useEffect`.
 *   **Nettoyage du Socket** : Modifier `disconnectTV` pour fermer proprement le socket et réinitialiser `client = null`. Appeler `disconnectTV()` au démontage de `RemoteScreen`.
 
 ### 2. Amélioration de l'Expérience Utilisateur (UX)
 *   **Ajout d'un bouton Retour** : Ajouter un bouton "Retour" (<) stylisé en haut à gauche de `RemoteScreen` pour permettre à l'utilisateur de revenir facilement à la liste des téléviseurs.
-*   **Indicateurs visuels et pull-to-refresh** :
-    *   Ajouter un composant `<ActivityIndicator>` sur `HomeScreen` pour montrer que le scan est en cours.
-    *   Intégrer la propriété `refreshing` et `onRefresh` sur la `FlatList` pour permettre de relancer le scan manuellement.
-    *   Afficher un message clair si la liste des TV est vide après un timeout.
+*   ~~**Indicateurs visuels et pull-to-refresh** : Ajouter un composant `<ActivityIndicator>` sur `HomeScreen`, intégrer la propriété `refreshing` et `onRefresh` sur la `FlatList`, et afficher un message d'absence de téléviseurs~~ **(Fait)**
 *   **Statut dynamique et coloré** : Ajuster la couleur du statut dans `RemoteScreen` (ex. jaune/orange pour "Connexion..." et vert uniquement pour "Connecté").
 *   **Retour Haptique** : Importer `react-native-haptic-feedback` ou utiliser l'API native pour générer une légère vibration lors des pressions sur les touches directionnelles et les boutons.
 *   **Sauvegarde locale (Persistance)** : Utiliser `@react-native-async-storage/async-storage` pour enregistrer l'adresse IP et le nom du dernier téléviseur connecté. Au démarrage de l'app, tenter une connexion automatique directe sans passer par la phase de scan si un appareil est enregistré.

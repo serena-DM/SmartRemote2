@@ -5,6 +5,7 @@ const zeroconf = new Zeroconf();
 export const searchAndroidTV = (
   onFound: (device: any) => void,
 ) => {
+  zeroconf.removeAllListeners('resolved');
   zeroconf.scan('googlecast', 'tcp', 'local.');
 
   zeroconf.on('resolved', service => {
@@ -20,4 +21,5 @@ export const searchAndroidTV = (
 
 export const stopSearch = () => {
   zeroconf.stop();
+  zeroconf.removeAllListeners('resolved');
 };
