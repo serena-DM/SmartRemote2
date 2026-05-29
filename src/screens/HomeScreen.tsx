@@ -16,7 +16,7 @@ import {searchAndroidTV, stopSearch} from '../services/mdns';
 export default function HomeScreen({navigation}: any) {
   const [devices, setDevices] = useState<any[]>([]);
   const [isScanning, setIsScanning] = useState<boolean>(false);
-  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const startScan = useCallback(() => {
     // Nettoyer le scan précédent s'il y en a un
