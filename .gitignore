@@ -76,3 +76,5 @@ yarn-error.log
 android/app/smartremote-key.keystore
 android/keystore.properties
 android/app/smartremote-key.keystore
+android/keystore.properties
+android/app/smartremote-key.keystore
