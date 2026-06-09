@@ -1,43 +1,28 @@
-import React from 'react';
-import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-} from 'react-native';
+import { NativeModules, Alert } from 'react-native';
+const { AdbModule } = NativeModules;
 
-import colors from '../constants/colors';
+// 1. Fonction pour se connecter
+const connectToTv = async (ip: string) => {
+  try {
+    console.log("Tentative de connexion ADB...");
+    const status = await AdbModule.connect(ip);
+    console.log("Status:", status);
+    // Ici, regardez votre TV, elle va demander une autorisation !
+  } catch (e) {
+    Alert.alert("Erreur", "Impossible de se connecter à la TV. Vérifiez le port 5555.");
+  }
+};
 
-interface Props {
-  title: string;
-  onPress: () => void;
-}
+// 2. Fonction pour envoyer une touche
+const pressKey = async (adbKeyCode: number) => {
+  try {
+    await AdbModule.sendKey(adbKeyCode);
+  } catch (e) {
+    console.log("Erreur d'envoi", e);
+  }
+};
 
-export default function RemoteButton({
-  title,
-  onPress,
-}: Props) {
-  return (
-    <TouchableOpacity
-      style={styles.button}
-      onPress={onPress}>
-      <Text style={styles.text}>{title}</Text>
-    </TouchableOpacity>
-  );
-}
-
-const styles = StyleSheet.create({
-  button: {
-    width: 90,
-    height: 60,
-    backgroundColor: colors.secondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 20,
-    margin: 10,
-  },
-  text: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-});
+// ... Dans votre rendu (bouton)
+<TouchableOpacity onPress={() => pressKey(19)}> 
+  <Text>HAUT (UP)</Text>
+</TouchableOpacity>

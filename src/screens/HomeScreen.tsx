@@ -26,7 +26,11 @@ export default function HomeScreen({navigation}: any) {
     stopSearch();
 
     setIsScanning(true);
-    setDevices([]);
+    setDevices([{
+    name: 'Android TV (hi352t)',
+    host: '192.168.43.15',
+    port: 8080,
+}]);
 
     searchAndroidTV(device => {
       setDevices(prev => {

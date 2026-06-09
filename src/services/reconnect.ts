@@ -1,18 +1,16 @@
-let reconnectInterval: any = null;
+let timer: any = null;
 
-export const startReconnect = (reconnectFn: () => void) => {
-  if (reconnectInterval) {
-    return; // Évite de multiplier les timers si déjà en cours
-  }
-
-  reconnectInterval = setInterval(() => {
-    reconnectFn();
+export const startReconnect = (callback: () => void) => {
+  if (timer) return;
+  timer = setInterval(() => {
+    console.log("Tentative de reconnexion...");
+    callback();
   }, 5000);
 };
 
 export const stopReconnect = () => {
-  if (reconnectInterval) {
-    clearInterval(reconnectInterval);
-    reconnectInterval = null; // Nettoie proprement la référence
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
   }
 };
